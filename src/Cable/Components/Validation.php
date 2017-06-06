@@ -24,7 +24,7 @@ class Validation
     /**
      * @var array
      */
-    protected $messages = [
+    protected static $messages = [
         'required' => '$0 alanı doldurulması zorunludur.',
         'min' => '$0 alanına girilebilecek en küçük değer $1',
         'max' => '$0 alanına girilebilecek en büyük değer $1',
@@ -54,7 +54,7 @@ class Validation
         'url' => 'handleRuleUrl',
         'alpha' => 'handleRuleAlpha',
         'numeric' => 'handleRuleNumeric',
-        'alha_numeric' => 'handleRunAlphaNumeric',
+        'alpha_numeric' => 'handleRunAlphaNumeric',
         'digit_min' => 'handleRuleDigitMin',
         'digit_max' => 'handleRuleDigitMax',
         'digit_between' => 'handleRuleDigitBetween',
@@ -62,7 +62,26 @@ class Validation
         'ip' => 'handleRuleIp',
         'match_with' => 'handleRuleMatchWith',
         'required' => 'handleRuleRequired',
+        'same_digit' => 'handleRuleSameDigit'
     ];
+
+    /**
+     * @param $name
+     * @param callable $callback
+     * @param $message
+     */
+    public static function addRule($name,callable $callback, $message){
+        static::$rulesCallback[$name] = $callback;
+        static::$messages[$name] = $message;
+    }
+
+    /**
+     * @param $name
+     * @param callable $callback
+     */
+    public static function addFilters($name, callable $callback){
+        static::$filterCallbacks[$name] = $callback;
+    }
 
     /**
      * @var array
@@ -433,11 +452,11 @@ class Validation
 
         $message = $name;
 
-        if ( ! isset($this->messages[$name])) {
+        if ( ! isset(static::$messages[$name])) {
             $message = 'default';
         }
 
-        return array($callback, $this->messages[$message]);
+        return array($callback, static::$messages[$message]);
     }
 
 
@@ -452,26 +471,6 @@ class Validation
         }
 
         return array($item, array());
-    }
-
-    /**
-     * @param $return
-     * @param $rule
-     * @param $index
-     */
-    protected function handleRuleResult($return, $rule, $index, $args)
-    {
-        if ( ! $return) {
-            $full = $rule.'.'.$index;
-            $message = isset($this->messages[$full]) ?
-                $this->messages[$full] :
-                $this->messages[$rule];
-            $this->errors[$full] = $this->prepareErrorMessage(
-                $index,
-                $message,
-                $args
-            );
-        }
     }
 
     /**
@@ -708,7 +707,7 @@ class Validation
      */
     public function getMessages()
     {
-        return $this->messages;
+        return static::$messages;
     }
 
     /**
@@ -718,7 +717,7 @@ class Validation
     public function setMessages($messages)
     {
         if (count($messages) !== 0) {
-            $this->messages = array_merge($this->messages, $messages);
+            static::$messages = array_merge(static::$messages, $messages);
         }
 
         return $this;
