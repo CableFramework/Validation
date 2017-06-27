@@ -3,7 +3,7 @@
 namespace Cable\Validation;
 
 
-class Filter
+abstract class Filter
 {
 
     /**
@@ -11,20 +11,15 @@ class Filter
      */
     private $name;
 
-    /**
-     * @var mixed
-     */
-    private $callback;
+
 
     /**
      * Filter constructor.
      * @param string $name
-     * @param null $callback
      */
-    public function __construct($name = '', $callback = null)
+    public function __construct($name = '')
     {
-        $this->setName($name)
-            ->setCallback($callback);
+        $this->setName($name);
     }
 
     /**
@@ -46,24 +41,12 @@ class Filter
         return $this;
     }
 
+
+
     /**
+     * @param mixed $data
      * @return mixed
      */
-    public function getCallback()
-    {
-        return $this->callback;
-    }
-
-    /**
-     * @param mixed $callback
-     * @return Filter
-     */
-    public function setCallback($callback)
-    {
-        $this->callback = $callback;
-
-        return $this;
-    }
-
+    abstract public function execute($data);
 }
 

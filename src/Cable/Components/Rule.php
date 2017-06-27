@@ -3,62 +3,37 @@
 namespace Cable\Validation;
 
 
-class Rule
+abstract class Rule
 {
 
     /**
      * @var string
      */
-    private $name;
+    protected $name;
 
-    /**
-     * @var string
-     */
-    private $error;
 
     /**
      * @var array
      */
-    private $parameters;
-
+    private $datas;
 
     /**
-     * @var mixed
+     * @var array
      */
-    private $callback;
+    protected $parameters;
+
 
     /**
-     * Filter constructor.
-     * @param string $name
-     * @param array $parameters
-     * @param string $error
+     * @var string
      */
-    public function __construct($name = '',array $parameters = [], $error = '', $callback = '')
-    {
-        $this->setName($name)
-            ->setParameters($parameters)
-            ->setError($error)
-            ->setCallback($callback);
-    }
+    protected $errorMessage;
 
     /**
+     * @param mixed $data
+     *
      * @return mixed
      */
-    public function getCallback()
-    {
-        return $this->callback;
-    }
-
-    /**
-     * @param mixed $callback
-     * @return Rule
-     */
-    public function setCallback($callback)
-    {
-        $this->callback = $callback;
-
-        return $this;
-    }
+    abstract public function handle($data);
 
 
     /**
@@ -80,24 +55,6 @@ class Rule
         return $this;
     }
 
-    /**
-     * @return mixed
-     */
-    public function getError()
-    {
-        return $this->error;
-    }
-
-    /**
-     * @param mixed $error
-     * @return Rule
-     */
-    public function setError($error)
-    {
-        $this->error = $error;
-
-        return $this;
-    }
 
     /**
      * @return mixed
@@ -108,10 +65,10 @@ class Rule
     }
 
     /**
-     * @param mixed $parameters
+     * @param array $parameters
      * @return Rule
      */
-    public function setParameters($parameters)
+    public function setParameters(array $parameters)
     {
         $this->parameters = $parameters;
 
@@ -119,4 +76,38 @@ class Rule
     }
 
 
+    /**
+     * @return array
+     */
+    public function getDatas(){
+        return $this->datas;
+    }
+
+    /**
+     * @param array $datas
+     * @return $this
+     */
+    public function setDatas(array  $datas){
+        $this->datas = $datas;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getErrorMessage()
+    {
+        return $this->errorMessage;
+    }
+
+    /**
+     * @param string $errorMessage
+     * @return Rule
+     */
+    public function setErrorMessage($errorMessage)
+    {
+        $this->errorMessage = $errorMessage;
+
+        return $this;
+    }
 }

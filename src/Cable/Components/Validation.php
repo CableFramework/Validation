@@ -5,29 +5,26 @@ namespace Cable\Validation;
 class Validation
 {
     /**
-     * @var array
+     * @var RuleRepository
      */
-    protected $rules = [];
+    private $ruleRepository;
+
     /**
-     * @var array
+     * @var FilterRepository
      */
-    protected $filters = [];
+    private $filterRepository;
+
+
     /**
      * @var array
      */
     protected $errors = [];
 
-    /**
-     * @var array
-     */
-    protected $datas;
+
     /**
      * @var array
      */
     protected static $messages = [
-        'required' => '$0 alanı doldurulması zorunludur.',
-        'min' => '$0 alanına girilebilecek en küçük değer $1',
-        'max' => '$0 alanına girilebilecek en büyük değer $1',
         'between' => '$0 alanına girilebilecek değerler $1 - $2 aralığında olmadılıdır.',
         'digit_min' => '$0 alanına en düşük $1 karekterli bir yazı girebilirsiniz.',
         'digit_max' => '$0 alanına en büyük $1 karekterli bir yazı girebilirsiniz.',
@@ -35,79 +32,22 @@ class Validation
         'alpha' => '$0 alanına girilen değer bir a-zA-Z formatına uygun olmalıdır.',
         'numeric' => '$0 alanına girilen değer bir sayı olmalıdır.',
         'ip' => '$0 alanınına girilen değer bir ip adresine ait olmalıdır.',
-        'url' => '$0 alanına girilen değer bir url adresine ait olmalıdır.',
-        'email' => '$0 alanına girilen değer bir email adresine ait olmalıdır.',
         'alpha_numeric' => '$0 alanına girilen değer a-zA-Z0-9 formatına uygun olmalıdır.',
-        'match_with' => '$0 alanına girilen değer $1 alanıyla aynı olmalıdır',
         'same_digit' => '$0 alanına girilen karekter uzunluğu $1 alanıyla eşit olmalıdır',
-
         'default' => '%s is not valid',
     ];
 
-    /**
-     * @var array
-     */
-    private static $rulesCallback = [
-        'max' => 'handleRuleMax',
-        'min' => 'handleRuleMin',
-        'email' => 'handleRuleEmail',
-        'url' => 'handleRuleUrl',
-        'alpha' => 'handleRuleAlpha',
-        'numeric' => 'handleRuleNumeric',
-        'alpha_numeric' => 'handleRunAlphaNumeric',
-        'digit_min' => 'handleRuleDigitMin',
-        'digit_max' => 'handleRuleDigitMax',
-        'digit_between' => 'handleRuleDigitBetween',
-        'between' => 'handleRuleBetween',
-        'ip' => 'handleRuleIp',
-        'match_with' => 'handleRuleMatchWith',
-        'required' => 'handleRuleRequired',
-        'same_digit' => 'handleRuleSameDigit'
-    ];
-
-    /**
-     * @param $name
-     * @param callable $callback
-     * @param $message
-     */
-    public static function addRule($name,callable $callback, $message){
-        static::$rulesCallback[$name] = $callback;
-        static::$messages[$name] = $message;
-    }
-
-    /**
-     * @param $name
-     * @param callable $callback
-     */
-    public static function addFilters($name, callable $callback){
-        static::$filterCallbacks[$name] = $callback;
-    }
-
-    /**
-     * @var array
-     */
-    private static $filterCallbacks = [
-        'xss' => 'handleFilterXss',
-    ];
 
 
     /**
      * Validation constructor.
-     * @param array $datas
-     * @param array $rules
-     * @param array $filters
+     * @param RuleRepository $ruleRepository
+     * @param FilterRepository $filterRepository
      */
-    public function __construct(array $datas = [], array $rules = [], array $filters = [])
+    public function __construct(RuleRepository $ruleRepository, FilterRepository $filterRepository)
     {
-        $this->setDatas($datas);
-
-        if ( ! empty($filters)) {
-            $this->setFilters($filters);
-        }
-
-        if ( ! empty($rules)) {
-            $this->setRules($rules);
-        }
+        $this->ruleRepository = $ruleRepository;
+        $this->filterRepository = $filterRepository;
     }
 
     /**
@@ -119,21 +59,41 @@ class Validation
      */
     public function make(array $datas = [], array $rules = [], array $filters = [], $strict = true)
     {
-        $validation =  new static($datas, $rules, $filters);
-
-
-        return $validation->run($strict);
+        return $this->run($datas, $rules, $filters, $strict);
 
     }
 
+
     /**
-     * @param $strict
+     * @param array $datas
+     * @param array $rules
+     * @param array $filters
+     * @param bool $strict
+     * @throws ValidationException
      * @return $this
      */
-    public function run($strict)
+    public function run(array $datas, array $rules,array  $filters, $strict = true)
     {
-        $this->handleFilters();
-        $this->handleRules($strict);
+        foreach ($rules as $key => $rule){
+            $data = isset($datas[$key]) ? $datas[$key] : nulll;
+
+            if (isset($filters[$key])) {
+                $data = $this->resolveFilterbag($this->prepareFilter($filters[$key]));
+            }
+        }
+
+        foreach ($datas as $key => $data){
+            if (isset($filters[$key])) {
+                $data = $this->resolveFilterbag($this->prepareFilter($data));
+            }
+
+            if (isset($rules[$key])) {
+                $this->resolveRulebag($data, $this->prepareRules($rules[$key], $datas), $strict);
+            }
+
+        }
+
+        #$this->handleRules($datas, $this->prepareRules($rules));
 
 
         return $this;
@@ -148,64 +108,14 @@ class Validation
         return $this->cleanInput($data, 0);
     }
 
-    /**
-     * @param $input
-     * @param int $safe_level
-     * @return mixed|string
-     */
-    private function cleanInput($input, $safe_level = 0)
-    {
-        $output = $input;
-        do {
-            // Treat $input as buffer on each loop, faster than new var
-            $input = $output;
-            // Remove unwanted tags
-            $output = $this->stripTags($input);
-            $output = $this->stripEncodedEntities($output);
-            // Use 2nd input param if not empty or '0'
-            if ($safe_level !== 0) {
-                $output = $this->stripBase64($output);
-            }
-        } while ($output !== $input);
 
-        return $output;
-    }
-
-
-    private function handleFilters()
-    {
-        $filters = $this->getFilters();
-        $datas = &$this->datas;
-
-        foreach ($filters as $data => $filter) {
-            if ( ! isset($datas[$data])) {
-                continue;
-            }
-
-            $datas[$data] = $this->resolveFilterbag($data, $filter);
-        }
-
-    }
-
-    /**
-     * @param bool $strict
-     */
-    private function handleRules($strict = true)
-    {
-        $rules = $this->getRules();
-        $datas = $this->datas;
-
-        foreach ($rules as $data => $rule) {
-            $this->resolveRulebag($data, $rule, $strict);
-        }
-    }
 
     /**
      * @param $data
      * @param $rules
      * @param bool $strict
      */
-    private function resolveRulebag($data, $rules, $strict = false)
+    private function resolveRulebag($data, Rulebag $rules, $strict = false)
     {
         $rules = $rules->getRules();
 
@@ -214,14 +124,13 @@ class Validation
             /**
              * @var Rule $rule
              */
-            list($callback, $parameters) = $this->prepareCallbackAndParameters($data, $rule);
 
-            $result = $callback(...$parameters);
+            $result = $rule->handle($data);
 
-            if ($result === false) {
+            if (!$result) {
                 $this->errors = $this->prepareErrorMessage(
                     $data,
-                    $rule->getError(),
+                    $rule->getErrorMessage(),
                     $rule->getParameters()
                 );
 
@@ -235,29 +144,6 @@ class Validation
         }
     }
 
-    /**
-     * @param $data
-     * @param $rule
-     * @return array
-     */
-    private function prepareCallbackAndParameters($data, $rule)
-    {
-        $callback = $rule->getCallback();
-        $parameters = $rule->getParameters();
-
-
-        if (is_string($callback)) {
-            $callback = array($this, $callback);
-        }
-
-        $parameters = array(
-            $data,
-            $parameters,
-            $this->datas,
-        );
-
-        return array($callback, $parameters);
-    }
 
 
     /**
@@ -274,104 +160,13 @@ class Validation
              * @var Filter $filter
              */
 
-            $callback = $filter->getCallback();
-
-            if (is_string($callback)) {
-                $callback = array($this, $callback);
-            }
-
-            $data = $callback($data);
+            $data = $filter->execute($data);
         }
 
         return $data;
     }
 
 
-    /*
-     * Focuses on stripping encoded entities
-     * *** This appears to be why people use this sample code. Unclear how well Kses does this ***
-     *
-     * @param   string  $input  Content to be cleaned. It MAY be modified in output
-     * @return  string  $input  Modified $input string
-     */
-    private function stripEncodedEntities($input)
-    {
-        $input = str_replace(array('&amp;', '&lt;', '&gt;'), array('&amp;amp;', '&amp;lt;', '&amp;gt;'), $input);
-        $input = preg_replace('/(&#*\w+)[\x00-\x20]+;/u', '$1;', $input);
-        $input = preg_replace('/(&#x*[0-9A-F]+);*/iu', '$1;', $input);
-        $input = html_entity_decode($input, ENT_COMPAT, 'UTF-8');
-        $input = preg_replace('#(<[^>]+?[\x00-\x20"\'])(?:on|xmlns)[^>]*+[>\b]?#iu', '$1>', $input);
-        $input = preg_replace(
-            '#([a-z]*)[\x00-\x20]*=[\x00-\x20]*([`\'"]*)[\x00-\x20]*j[\x00-\x20]*a[\x00-\x20]*v[\x00-\x20]*a[\x00-\x20]*s[\x00-\x20]*c[\x00-\x20]*r[\x00-\x20]*i[\x00-\x20]*p[\x00-\x20]*t[\x00-\x20]*:#iu',
-            '$1=$2nojavascript...',
-            $input
-        );
-        $input = preg_replace(
-            '#([a-z]*)[\x00-\x20]*=([\'"]*)[\x00-\x20]*v[\x00-\x20]*b[\x00-\x20]*s[\x00-\x20]*c[\x00-\x20]*r[\x00-\x20]*i[\x00-\x20]*p[\x00-\x20]*t[\x00-\x20]*:#iu',
-            '$1=$2novbscript...',
-            $input
-        );
-        $input = preg_replace(
-            '#([a-z]*)[\x00-\x20]*=([\'"]*)[\x00-\x20]*-moz-binding[\x00-\x20]*:#u',
-            '$1=$2nomozbinding...',
-            $input
-        );
-        $input = preg_replace(
-            '#(<[^>]+?)style[\x00-\x20]*=[\x00-\x20]*[`\'"]*.*?expression[\x00-\x20]*\([^>]*+>#i',
-            '$1>',
-            $input
-        );
-        $input = preg_replace(
-            '#(<[^>]+?)style[\x00-\x20]*=[\x00-\x20]*[`\'"]*.*?behaviour[\x00-\x20]*\([^>]*+>#i',
-            '$1>',
-            $input
-        );
-        $input = preg_replace(
-            '#(<[^>]+?)style[\x00-\x20]*=[\x00-\x20]*[`\'"]*.*?s[\x00-\x20]*c[\x00-\x20]*r[\x00-\x20]*i[\x00-\x20]*p[\x00-\x20]*t[\x00-\x20]*:*[^>]*+>#iu',
-            '$1>',
-            $input
-        );
-
-        return $input;
-    }
-
-    /*
-     * Focuses on stripping unencoded HTML tags & namespaces
-     *
-     * @param   string  $input  Content to be cleaned. It MAY be modified in output
-     * @return  string  $input  Modified $input string
-     */
-    private function stripTags($input)
-    {
-        $input = preg_replace(
-            '#</*(?:applet|b(?:ase|gsound|link)|embed|frame(?:set)?|i(?:frame|layer)|l(?:ayer|ink)|meta|object|s(?:cript|tyle)|title|xml)[^>]*+>#i',
-            '',
-            $input
-        );
-        $input = preg_replace('#</*\w+:\w[^>]*+>#i', '', $input);
-
-        return $input;
-    }
-
-    /*
-     * Focuses on stripping entities from Base64 encoded strings
-     *
-     * NOT ENABLED by default!
-     * To enable 2nd param of clean_input() can be set to anything other than 0 or '0':
-     * ie: xssClean->clean_input( $input_string, 1 )
-     *
-     * @param   string  $input      Maybe Base64 encoded string
-     * @return  string  $output     Modified & re-encoded $input string
-     */
-    private function stripBase64($input)
-    {
-        $decoded = base64_decode($input);
-        $decoded = $this->stripTags($decoded);
-        $decoded = $this->stripEncodedEntities($decoded);
-        $output = base64_encode($decoded);
-
-        return $output;
-    }
 
     /**
      * @param $data
@@ -384,7 +179,7 @@ class Validation
 
 
     /**
-     * @param $filter
+     * @param string $filter
      * @return Filterbag
      * @throws ValidationException
      */
@@ -394,7 +189,8 @@ class Validation
 
         $filterBag = new Filterbag();
         foreach ($filters as $item) {
-            if ( ! isset(static::$filterCallbacks[$item])) {
+
+            if ( ! $this->filterRepository->has($item)) {
                 throw new ValidationException(
                     sprintf(
                         '%s filter does not exists',
@@ -403,61 +199,47 @@ class Validation
                 );
             }
 
-            $callback = static::$filterCallbacks[$item];
+            $this->filterRepository->get($item);
 
-
-            $filterBag->add(new Filter($item, $callback));
+            $filterBag->add($filter);
         }
 
         return $filterBag;
     }
 
     /**
-     * @param $rule
+     * @param string $rule
+     * @param array $datas
+     * @throws ValidationException
      * @return Rulebag
      */
-    private function prepareRules($rule)
+    private function prepareRules($rule, array $datas = [])
     {
+
         $exploded = explode('|', $rule);
 
         $ruleBag = new Rulebag();
         foreach ($exploded as $item) {
 
             list($name, $parameters) = $this->prepareRuleParameters($item);
-            list($callback, $message) = $this->prepareRuleCallbackMessage($name);
 
-            $ruleBag->add(
-                new Rule($name, $parameters, $message, $callback)
-            );
+            if ( !$this->ruleRepository->has($name)) {
+                throw new ValidationException(
+                    sprintf('%s rule not found', $name)
+                );
+            }
+
+            $rule = $this->ruleRepository->get($name);
+
+
+            $rule->setParameters(!empty($parameters) ? $parameters : [])
+                ->setDatas($datas);
+
+            $ruleBag->add($rule);
         }
 
         return $ruleBag;
     }
-
-    /**
-     * @param string $name
-     * @return array
-     * @throws ValidationException
-     */
-    private function prepareRuleCallbackMessage($name)
-    {
-        if ( ! isset(static::$rulesCallback[$name])) {
-            throw new ValidationException(
-                sprintf('%s rule not found', $name)
-            );
-        }
-
-        $callback = static::$rulesCallback[$name];
-
-        $message = $name;
-
-        if ( ! isset(static::$messages[$name])) {
-            $message = 'default';
-        }
-
-        return array($callback, static::$messages[$message]);
-    }
-
 
     /**
      * @param string $item
@@ -486,71 +268,6 @@ class Validation
         }
 
         return $message;
-    }
-
-    /**
-     * @param $index
-     * @return bool
-     */
-    protected function handleRuleRequired($index)
-    {
-        return ( ! empty($this->datas[$index]));
-    }
-
-
-    /**
-     * @param $index
-     * @param array $params
-     * @return bool
-     */
-    protected function handleRuleMin($index, $params = [])
-    {
-        $min = $params[0];
-        $data = $this->datas[$index];
-
-        return ($data >= $min);
-    }
-
-    /**
-     * @param $index
-     * @param array $params
-     * @return bool
-     */
-    protected function handleRuleDigitMin($index, $params = [])
-    {
-        $min = isset($params[0]) ? $params[0] : false;
-        if (false === $min) {
-            return false;
-        }
-        $data = $this->datas[$index];
-
-        return (strlen($data) >= $min);
-    }
-
-    /**
-     * @param $index
-     * @param array $params
-     * @return bool
-     */
-    protected function handleRuleMax($index, $params = [])
-    {
-        $max = $params[0];
-        $data = $this->datas[$index];
-
-        return ($data < $max);
-    }
-
-    /**
-     * @param $index
-     * @param array $params
-     * @return bool
-     */
-    protected function handleRuleDigitMax($index, $params = [])
-    {
-        $max = $params[0];
-        $data = $this->datas[$index];
-
-        return (strlen($data) < $max);
     }
 
     /**
@@ -608,14 +325,6 @@ class Validation
         return filter_var($this->datas[$index], FILTER_VALIDATE_URL);
     }
 
-    /**
-     * @param $index
-     * @return mixed
-     */
-    public function handleRuleEmail($index)
-    {
-        return filter_var($this->datas[$index], FILTER_VALIDATE_EMAIL);
-    }
 
     /**
      * @param $index
@@ -680,26 +389,7 @@ class Validation
         return $this;
     }
 
-    /**
-     * @return array
-     */
-    public function getFilters()
-    {
-        return $this->filters;
-    }
 
-    /**
-     * @param array $filters
-     * @return Model
-     */
-    public function setFilters($filters)
-    {
-        foreach ($filters as $filter) {
-            $this->filters[] = $this->prepareFilter($filter);
-        }
-
-        return $this;
-    }
 
     /**
      * @return array
@@ -711,7 +401,7 @@ class Validation
 
     /**
      * @param array $messages
-     * @return Model
+     * @return Validation
      */
     public function setMessages($messages)
     {
@@ -736,24 +426,5 @@ class Validation
     public function failings()
     {
         return $this->errors;
-    }
-
-    /**
-     * @return array
-     */
-    public function getDatas()
-    {
-        return $this->datas;
-    }
-
-    /**
-     * @param array $datas
-     * @return Validation
-     */
-    public function setDatas($datas)
-    {
-        $this->datas = $datas;
-
-        return $this;
     }
 }

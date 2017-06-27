@@ -12,9 +12,9 @@ class Rulebag
 
     /**
      * Rulebag constructor.
-     * @param array $rules
+     * @param Rule[] ...$rules
      */
-    public function __construct(array $rules = [])
+    public function __construct(Rule ...$rules)
     {
         $this->rules = $rules;
     }
