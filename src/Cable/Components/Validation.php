@@ -216,8 +216,7 @@ class Validation
              */
             list($callback, $parameters) = $this->prepareCallbackAndParameters($data, $rule);
 
-            $result = call_user_func_array($callback, $parameters);
-
+            $result = $callback(...$parameters);
 
             if ($result === false) {
                 $this->errors = $this->prepareErrorMessage(
