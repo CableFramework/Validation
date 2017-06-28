@@ -52,7 +52,7 @@ class Validation
     /**
      * @var array
      */
-    protected static $messages = [
+    protected $messages = [
         'default' => '%s is not valid',
     ];
 
@@ -61,7 +61,8 @@ class Validation
      * @param Rule $rule
      * @return $this
      */
-    public function addRule(Rule $rule){
+    public function addRule(Rule $rule)
+    {
         $this->ruleRepository->addRule($rule);
 
         return $this;
@@ -71,7 +72,8 @@ class Validation
      * @param Filter $filter
      * @return $this
      */
-    public function addFilter(Filter $filter){
+    public function addFilter(Filter $filter)
+    {
         $this->filterRepository->addFilter($filter);
 
         return $this;
@@ -87,6 +89,25 @@ class Validation
         $this->ruleRepository = $ruleRepository;
         $this->filterRepository = $filterRepository;
     }
+
+    /**
+     * @param array $messages
+     * @return $this
+     */
+    public function messages(array $messages)
+    {
+        foreach ($messages as $key => $message) {
+
+            if (strpos($key, '.') !== false) {
+                $this->messages[$key] = $message;
+            } else {
+                $this->ruleRepository->get($key)->setErrorMessage($message);
+            }
+        }
+
+        return $this;
+    }
+
 
     /**
      * @param array $datas
@@ -110,11 +131,11 @@ class Validation
      * @throws ValidationException
      * @return $this
      */
-    public function run(array $datas, array $rules,array  $filters, $strict = true)
+    public function run(array $datas, array $rules, array $filters, $strict = true)
     {
-        foreach ($rules as $key => $rule){
+        foreach ($rules as $key => $rule) {
 
-            if ( !isset($datas[$key])) {
+            if ( ! isset($datas[$key])) {
                 $datas[$key] = null;
             }
 
@@ -140,19 +161,27 @@ class Validation
         list($key, $data) = $variables;
 
         $resolver = new RuleResolver($rules, $strict);
-
         $resolved = $resolver->handle($data);
 
-
-        if (!$resolved) {
-            $this->errors = $this->prepareErrorMessage(
-                $key,
-                $resolver->getErrorMessage(),
-                $resolver->getParameters()
-            );
+        // if there is nothing wrong just return
+        if ($resolved) {
+            return;
         }
-    }
 
+        $name = $resolver->getName().'.'.$key;
+
+        $message = isset($this->messages[$name]) ?
+            $this->messages[$name] :
+            $resolver->getErrorMessage();
+
+        $message = $message === '' ? $this->messages['default'] : $message;
+
+        $this->errors = $this->prepareErrorMessage(
+            $key,
+            $message,
+            $resolver->getParameters()
+        );
+    }
 
 
     /**
@@ -160,7 +189,7 @@ class Validation
      * @param Filterbag $filters
      * @return mixed
      */
-    private function resolveFilterbag($data,Filterbag $filters)
+    private function resolveFilterbag($data, Filterbag $filters)
     {
         return (new FilterResolver($filters))->execute($data);
     }
@@ -215,7 +244,7 @@ class Validation
 
             list($name, $parameters) = $this->prepareRuleParameters($item);
 
-            if ( !$this->ruleRepository->has($name)) {
+            if ( ! $this->ruleRepository->has($name)) {
                 throw new ValidationException(
                     sprintf('%s rule not found', $name)
                 );
@@ -224,7 +253,7 @@ class Validation
             $rule = $this->ruleRepository->get($name);
 
 
-            $rule->setParameters(!empty($parameters) ? $parameters : [])
+            $rule->setParameters($parameters)
                 ->setDatas($datas);
 
             $ruleBag->add($rule);
