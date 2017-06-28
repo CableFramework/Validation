@@ -13,6 +13,10 @@ class Xss extends Filter
 {
 
     /**
+     * @var string
+     */
+    protected  $name;
+    /**
      * @param mixed $data
      * @return mixed
      */

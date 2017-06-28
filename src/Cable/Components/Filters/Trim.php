@@ -13,6 +13,11 @@ class Trim extends Filter
 {
 
     /**
+     * @var string
+     */
+    protected $name = 'trim';
+
+    /**
      * @param mixed $data
      * @return mixed
      */

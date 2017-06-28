@@ -9,7 +9,7 @@ abstract class Filter
     /**
      * @var string
      */
-    private $name;
+    protected $name;
 
 
 

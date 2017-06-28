@@ -17,7 +17,9 @@ class FilterRepository
      */
     public function __construct(Filter ...$filters)
     {
-        $this->filters = $filters;
+        foreach ($filters as $filter){
+            $this->addFilter($filter);
+        }
     }
 
     /**
@@ -40,10 +42,11 @@ class FilterRepository
      * @return $this
      */
     public function addFilter(Filter $filter){
-        $this->filters[] = $filter;
+        $this->filters[$filter->getName()] = $filter;
 
         return $this;
     }
+
     /**
      * @return Filter[]
      */
