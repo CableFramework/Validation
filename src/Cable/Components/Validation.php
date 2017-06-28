@@ -111,7 +111,7 @@ class Validation
      * @param Filterbag $filters
      * @return mixed
      */
-    private function resolveFilterbag($data, $filters)
+    private function resolveFilterbag($data,Filterbag $filters)
     {
         return (new FilterResolver($filters))->execute($data);
     }
@@ -141,9 +141,7 @@ class Validation
                 );
             }
 
-            $this->filterRepository->get($item);
-
-            $filterBag->add($filter);
+            $filterBag->add($this->filterRepository->get($item));
         }
 
         return $filterBag;
