@@ -13,13 +13,16 @@ class FilterRepository
 
     /**
      * FilterRepository constructor.
-     * @param Filter[] ...$filters
+     * @param Filter[] $filters
      */
-    public function __construct(Filter ...$filters)
+    public function __construct(array $filters)
     {
-        foreach ($filters as $filter){
-            $this->addFilter($filter);
+        if ( !empty($filters)) {
+            foreach ($filters as $filter){
+                $this->addFilter($filter);
+            }
         }
+
     }
 
     /**

@@ -15,13 +15,16 @@ class RuleRepository
 
     /**
      * RuleRepository constructor.
-     * @param Rule[] ...$rules
+     * @param Rule[] $rules
      */
-    public function __construct(Rule ...$rules)
+    public function __construct(array $rules)
     {
-        foreach ($rules as $rule){
-            $this->addRule($rule);
+        if ( !empty($rules)) {
+            foreach ($rules as $rule){
+                $this->addRule($rule);
+            }
         }
+
     }
 
     /**

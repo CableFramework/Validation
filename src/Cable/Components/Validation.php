@@ -33,6 +33,25 @@ class Validation
     ];
 
 
+    /**
+     * @param Rule $rule
+     * @return $this
+     */
+    public function addRule(Rule $rule){
+        $this->ruleRepository->addRule($rule);
+
+        return $this;
+    }
+
+    /**
+     * @param Filter $filter
+     * @return $this
+     */
+    public function addFilter(Filter $filter){
+        $this->filterRepository->addFilter($filter);
+
+        return $this;
+    }
 
     /**
      * Validation constructor.
@@ -70,14 +89,18 @@ class Validation
     public function run(array $datas, array $rules,array  $filters, $strict = true)
     {
         foreach ($rules as $key => $rule){
-            $data = isset($datas[$key]) ? $datas[$key] : nulll;
 
-            if (isset($filters[$key])) {
-                $data = $this->resolveFilterbag($this->prepareFilter($filters[$key]));
+            if ( !isset($datas[$key])) {
+                $datas[$key] = null;
             }
 
-            $this->resolveRulebag(array($key, $data), $this->prepareRules($rule));
+            if (isset($filters[$key])) {
+                $datas[$key] = $this->resolveFilterbag($this->prepareFilter($filters[$key]));
+            }
+
+            $this->resolveRulebag(array($key, $datas[$key]), $this->prepareRules($rule));
         }
+
 
 
         return $this;
