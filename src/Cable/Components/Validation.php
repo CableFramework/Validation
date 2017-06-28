@@ -28,6 +28,30 @@ class Validation
     /**
      * @var array
      */
+    private $filteredData;
+
+    /**
+     * @return array
+     */
+    public function getFilteredData()
+    {
+        return $this->filteredData;
+    }
+
+    /**
+     * @param array $filteredData
+     * @return Validation
+     */
+    public function setFilteredData($filteredData)
+    {
+        $this->filteredData = $filteredData;
+
+        return $this;
+    }
+
+    /**
+     * @var array
+     */
     protected static $messages = [
         'default' => '%s is not valid',
     ];
@@ -98,10 +122,10 @@ class Validation
                 $datas[$key] = $this->resolveFilterbag($this->prepareFilter($filters[$key]));
             }
 
-            $this->resolveRulebag(array($key, $datas[$key]), $this->prepareRules($rule));
+            $this->resolveRulebag(array($key, $datas[$key]), $this->prepareRules($rule), $strict);
         }
 
-
+        $this->filteredData = $datas;
 
         return $this;
     }
@@ -111,7 +135,7 @@ class Validation
      * @param $rules
      * @param bool $strict
      */
-    private function resolveRulebag(array $variables, Rulebag $rules, $strict = false)
+    private function resolveRulebag(array $variables, Rulebag $rules, $strict = true)
     {
         list($key, $data) = $variables;
 
