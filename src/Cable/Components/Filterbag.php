@@ -20,7 +20,7 @@ class Filterbag
     }
 
     /**
-     * @param Rule $rule
+     * @param Filter $rule
      * @return $this
      */
     public function add(Filter $filter){
@@ -28,8 +28,9 @@ class Filterbag
 
         return $this;
     }
+
     /**
-     * @return array
+     * @return Filter[]
      */
     public function getFilters()
     {

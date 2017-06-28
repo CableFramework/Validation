@@ -14,15 +14,6 @@ abstract class Filter
 
 
     /**
-     * Filter constructor.
-     * @param string $name
-     */
-    public function __construct($name = '')
-    {
-        $this->setName($name);
-    }
-
-    /**
      * @return mixed
      */
     public function getName()

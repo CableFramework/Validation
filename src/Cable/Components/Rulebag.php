@@ -28,8 +28,9 @@ class Rulebag
 
         return $this;
     }
+
     /**
-     * @return array
+     * @return Rule[]
      */
     public function getRules()
     {

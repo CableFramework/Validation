@@ -75,35 +75,13 @@ class Validation
             if (isset($filters[$key])) {
                 $data = $this->resolveFilterbag($this->prepareFilter($filters[$key]));
             }
+
+            $this->resolveRulebag($data, $this->prepareRules($rule));
         }
-
-        foreach ($datas as $key => $data){
-            if (isset($filters[$key])) {
-                $data = $this->resolveFilterbag($this->prepareFilter($data));
-            }
-
-            if (isset($rules[$key])) {
-                $this->resolveRulebag($data, $this->prepareRules($rules[$key], $datas), $strict);
-            }
-
-        }
-
-        #$this->handleRules($datas, $this->prepareRules($rules));
 
 
         return $this;
     }
-
-    /**
-     * @param $data
-     * @return mixed|string
-     */
-    protected function handleFilterXss($data)
-    {
-        return $this->cleanInput($data, 0);
-    }
-
-
 
     /**
      * @param $data
@@ -112,30 +90,17 @@ class Validation
      */
     private function resolveRulebag($data, Rulebag $rules, $strict = false)
     {
-        $rules = $rules->getRules();
+        $resolver = new RuleResolver($rules, $strict);
 
-        foreach ($rules as $rule) {
-
-            /**
-             * @var Rule $rule
-             */
-
-            $result = $rule->handle($data);
-
-            if (!$result) {
-                $this->errors = $this->prepareErrorMessage(
-                    $data,
-                    $rule->getErrorMessage(),
-                    $rule->getParameters()
-                );
+        $resolved = $resolver->handle($data);
 
 
-                // if we are running in strict mode, then first failiure will stop the process
-                if ($strict === true) {
-                    return;
-                }
-            }
-
+        if (!$resolved) {
+            $this->errors = $this->prepareErrorMessage(
+                $data,
+                $resolver->getErrorMessage(),
+                $resolver->getParameters()
+            );
         }
     }
 
@@ -148,30 +113,8 @@ class Validation
      */
     private function resolveFilterbag($data, $filters)
     {
-        $filters = $filters->getFilters();
-
-        foreach ($filters as $filter) {
-            /**
-             * @var Filter $filter
-             */
-
-            $data = $filter->execute($data);
-        }
-
-        return $data;
+        return (new FilterResolver($filters))->execute($data);
     }
-
-
-
-    /**
-     * @param $data
-     * @return string
-     */
-    protected function handleFilterStripTags($data)
-    {
-        return strip_tags(htmlentities(htmlspecialchars($data)));
-    }
-
 
     /**
      * @param string $filter
@@ -180,6 +123,10 @@ class Validation
      */
     private function prepareFilter($filter)
     {
+        if ($filter instanceof Filterbag) {
+            return $filter;
+        }
+
         $filters = explode('|', $filter);
 
         $filterBag = new Filterbag();
@@ -210,6 +157,9 @@ class Validation
      */
     private function prepareRules($rule, array $datas = [])
     {
+        if ($rule instanceof Rulebag) {
+            return $rule;
+        }
 
         $exploded = explode('|', $rule);
 
