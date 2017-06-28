@@ -161,10 +161,9 @@ class Validation
         list($key, $data) = $variables;
 
         $resolver = new RuleResolver($rules, $strict);
-        $resolved = $resolver->handle($data);
 
         // if there is nothing wrong just return
-        if ($resolved) {
+        if ($resolver->handle($data) !== false) {
             return;
         }
 
