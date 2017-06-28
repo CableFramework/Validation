@@ -49,7 +49,8 @@ class RuleResolver extends Rule
 
             if ( !$result) {
                 $this->setErrorMessage($rule->getErrorMessage())
-                    ->setParameters($rule->getParameters());
+                    ->setParameters($rule->getParameters())
+                    ->setName($rule->getName());
 
                 if ($this->strict === true) {
                     return;

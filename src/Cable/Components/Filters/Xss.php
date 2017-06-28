@@ -15,7 +15,7 @@ class Xss extends Filter
     /**
      * @var string
      */
-    protected  $name;
+    protected  $name = 'xss';
     /**
      * @param mixed $data
      * @return mixed

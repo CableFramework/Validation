@@ -76,7 +76,7 @@ class Validation
                 $data = $this->resolveFilterbag($this->prepareFilter($filters[$key]));
             }
 
-            $this->resolveRulebag($data, $this->prepareRules($rule));
+            $this->resolveRulebag(array($key, $data), $this->prepareRules($rule));
         }
 
 
@@ -88,8 +88,10 @@ class Validation
      * @param $rules
      * @param bool $strict
      */
-    private function resolveRulebag($data, Rulebag $rules, $strict = false)
+    private function resolveRulebag(array $variables, Rulebag $rules, $strict = false)
     {
+        list($key, $data) = $variables;
+
         $resolver = new RuleResolver($rules, $strict);
 
         $resolved = $resolver->handle($data);
@@ -97,7 +99,7 @@ class Validation
 
         if (!$resolved) {
             $this->errors = $this->prepareErrorMessage(
-                $data,
+                $key,
                 $resolver->getErrorMessage(),
                 $resolver->getParameters()
             );
