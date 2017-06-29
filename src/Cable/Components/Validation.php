@@ -296,7 +296,7 @@ class Validation
      */
     public function failed()
     {
-        return ! empty($this->errors);
+        return !empty($this->errors);
     }
 
     /**
