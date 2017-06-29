@@ -35,6 +35,6 @@ class DigitMin extends Rule
             return false;
         }
 
-        return (strlen($data) >= $min);
+        return (strlen((string) $data) >= $min);
     }
 }

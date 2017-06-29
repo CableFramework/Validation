@@ -28,8 +28,8 @@ class Min extends Rule
      */
     public function handle($data)
     {
-        $min = $this->getParameters()[0];
+        $min = (int) $this->getParameters()[0];
 
-        return ($data >= $min);
+        return ((int) $data >= $min);
     }
 }
