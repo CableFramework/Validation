@@ -1,22 +1,26 @@
 {
-    "name": "cable/cable-validation",
-    "description": "Validation library for cable framework",
-    "type": "library",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "anonymframework",
-            "email": "vahit.serif119@gmail.com"
-        }
-    ],
-    "autoload": {
-        "psr-4": {
-            "Cable\\Validation\\": "src/Cable/Components"
-        }
-    },
-    "minimum-stability": "stable",
-    "require": {
-        "cable/cable-container": "^1.2",
-        "cable/cable-facades": "^1.0"
+  "name": "cable/cable-validation",
+  "description": "Validation library for cable framework",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "anonymframework",
+      "email": "vahit.serif119@gmail.com"
     }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Cable\\Validation\\": "src/Cable/Components"
+    },
+    "classmap": [
+      "src/Cable/Components/Rules/",
+      "src/Cable/Components/Filters/"
+    ]
+  },
+  "minimum-stability": "stable",
+  "require": {
+    "cable/cable-container": "^1.2",
+    "cable/cable-facades": "^1.0"
+  }
 }
